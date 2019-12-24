@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 from Analysis import Functions as F
-from matplotlib import pyplot as plt
+from Analysis import Plot as P
 
 
 class Variable():
@@ -63,7 +63,7 @@ class Variable():
         else:
             return Variable(data, new_name, new_unit)
 
-        def subset(self,start,stop=None,step=1,single=False):
+        def subset(self, start, stop=None, step=1, single=False):
             """
             This function returns another object
             of the same type but with a subset
@@ -76,13 +76,14 @@ class Variable():
                 data = self.data[start]
 
             if self.type == "Parameter":
-                result = Parameter(data,self.name,self.unit)
+                result = Parameter(data, self.name, self.unit)
             elif self.type == "Measurement":
-                result = Measurement(data,self.name,self.unit)
+                result = Measurement(data, self.name, self.unit)
             elif self.type == "Variable":
-                result = Variable(data,self.name,self.unit)
+                result = Variable(data, self.name, self.unit)
 
             return result
+
 
 class Parameter(Variable):
 
@@ -128,4 +129,103 @@ class DataSet():
 
         return
 
+    def plot_1D(self, parameter=0, measurement=0, Fit=None, label=None, Graph=None, draw=True, **kwargs):
+        """
+        This function is a wrapper for Analysis.Plot.Plot_1D
 
+        Parameters:
+        -----------------------------------------------------
+
+        parameter:  Int or instance of Parameter
+                Int is the preferred method as an
+                index to pick from self.parameters
+                but a parameter object can be passed manually
+
+        measurement:    See parameter
+        """
+
+        if label is not None:
+            kwargs["label"] = label
+        if Fit is not None:
+            kwargs["Fit"] = Fit
+
+        # If Index are passed we get the data from the set
+        if type(parameter) is int:
+            assert abs(parameter) < len(self.parameters), "Index %s to big for list of len %s" % (
+                abs(parameter), len(self.parameters))
+
+            parameter = self.parameters[parameter]
+
+        if type(measurement) is int:
+            assert abs(measurement) < len(self.measurements), "Index %s to big for list of len %s" % (
+                abs(measurement), len(self.measurements))
+
+            measurement = self.measurements[measurement]
+
+        # This check is only usefull if input is not int
+        assert isinstance(
+            parameter, Parameter), "Parameter must be int or Parameter instance"
+        assert isinstance(
+            measurement, Measurement), "Measurement must be int or Measurement instance"
+
+        # We pass the arguments
+        self.Graph = P.Plot_1D(parameter, measurement,Graph)
+
+        # We draw if needed
+        if draw is True:
+
+            if Fit is not None:
+                fig, ax, fit, err = self.Graph.draw(**kwargs)
+            else:
+                fig, ax = self.Graph.draw(**kwargs)
+                fit, err = None, None
+
+        return fig, ax, fit, err
+
+    def plots_1D(self, parameters=0, measurements=0, labels=None, Fit=None, draw=True, **kwargs):
+        """
+        A wrapper for plot_1D for multiple curves
+        """
+
+        if type(parameters) is not list:
+            parameters = [parameters]
+        if type(measurements) is not list:
+            measurements = [measurements]
+        if type(labels) is not list:
+            labels = [labels]
+        if type(Fit) is not list:
+            Fit = [Fit]
+
+        nb = len(measurements)
+
+        if len(parameters) != nb:
+            if len(parameters) == 1:
+                parameters = [parameters[0] for i in range(nb)]
+            else:
+                raise ValueError("Too much or too few parameters")
+
+        if len(labels) != nb:
+            if len(labels) == 1:
+                labels = [labels[0] for i in range(nb)]
+            else:
+                raise ValueError("Too much or too few labels")
+
+        if len(Fit) != nb:
+            if len(Fit) == 1:
+                Fit = [Fit[0] for i in range(nb)]
+            else:
+                raise ValueError("Too much or too few Fit")
+
+        fit, err = [None for i in range(nb)], [None for i in range(nb)]
+
+        for i in range(nb):
+
+            # First instance
+            if i == 0:
+                fig, ax, fit[i], err[i] = self.plot_1D(parameters[i], measurements[i],
+                                                       Fit[i], labels[i], None, True, **kwargs)
+            # Other instances
+            else:
+                fig, ax, fit[i], err[i] = self.plot_1D(parameters[i], measurements[i],
+                                                       Fit[i], labels[i], self.Graph, True, **kwargs)
+        return fig, ax, fit, err
