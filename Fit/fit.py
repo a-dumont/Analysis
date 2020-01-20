@@ -31,3 +31,14 @@ def exponential_fit(x, y, p0=None, sigma=None,bounds=(-np.inf,np.inf)):
     err = np.sqrt(np.diag(err))
 
     return fit, err
+
+def power_law_fit(x, y, p0=None, sigma=None,bounds=(-np.inf,np.inf)):
+    """
+    A simple power_law fit with limited options
+    for more functionality use curve_fit
+    manually
+    """
+    fit, err = CF(F.power_law, x, y, p0=p0, sigma=sigma,bounds=bounds)
+    err = np.sqrt(np.diag(err))
+
+    return fit, err

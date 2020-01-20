@@ -10,7 +10,7 @@ class Variable():
     a controlled variable of an experiment
     """
 
-    def __init__(self, data, name, unit, Type="Variable"):
+    def __init__(self, data, name, unit, label=None, Type="Variable"):
         """
         Parameters:
         -----------------------------
@@ -27,6 +27,7 @@ class Variable():
         self.name = name
         self.unit = unit
         self.type = Type
+        self.label = label
 
         if type(data) is list:
             self.data = np.array(data)
@@ -45,7 +46,7 @@ class Variable():
             self.name, self.data.min(), self.data.max(), self.unit, self.data.shape[0])
         return string
 
-    def rescale(self, function, new_name, new_unit, *args, Type=None):
+    def rescale(self, function,*args,new_name=None,new_unit=None,new_label=None,Type=None):
         """
         Rescales the parameter using the specified
         function and parameter, also changes the name
@@ -54,14 +55,21 @@ class Variable():
         assert callable(function), "Function must be callable"
         data = function(self.data, *args)
 
+        if new_name is None:
+            new_name = self.name
+        if new_unit is None:
+            new_unit = self.unit
+        if new_label is None:
+            new_label = self.label
+
         if Type is None:
             Type = self.type
         if Type == "Parameter":
-            return Parameter(data, new_name, new_unit)
+            return Parameter(data, new_name, new_unit,new_label)
         elif Type == "Measurement":
-            return Measurement(data, new_name, new_unit)
+            return Measurement(data, new_name, new_unit,new_label)
         else:
-            return Variable(data, new_name, new_unit)
+            return Variable(data, new_name, new_unit,new_label)
 
         def subset(self, start, stop=None, step=1, single=False):
             """
@@ -87,15 +95,17 @@ class Variable():
 
 class Parameter(Variable):
 
-    def __init__(self, data, name, unit):
-        super(Parameter, self).__init__(data, name, unit, Type="Parameter")
+    def __init__(self, data, name, unit, label=None):
+        super(Parameter, self).__init__(
+            data, name, unit, label, Type="Parameter")
         return
 
 
 class Measurement(Variable):
 
-    def __init__(self, data, name, unit):
-        super(Measurement, self).__init__(data, name, unit, Type="Measurement")
+    def __init__(self, data, name, unit, label=None):
+        super(Measurement, self).__init__(
+            data, name, unit, label, Type="Measurement")
         return
 
 
@@ -129,7 +139,7 @@ class DataSet():
 
         return
 
-    def plot_1D(self, parameter=0, measurement=0, Fit=None, label=None, Graph=None, draw=True, **kwargs):
+    def plot_1D(self, parameter=0, measurement=0, Fit=None, Graph=None, draw=True, **kwargs):
         """
         This function is a wrapper for Analysis.Plot.Plot_1D
 
@@ -144,8 +154,6 @@ class DataSet():
         measurement:    See parameter
         """
 
-        if label is not None:
-            kwargs["label"] = label
         if Fit is not None:
             kwargs["Fit"] = Fit
 
@@ -169,7 +177,7 @@ class DataSet():
             measurement, Measurement), "Measurement must be int or Measurement instance"
 
         # We pass the arguments
-        self.Graph = P.Plot_1D(parameter, measurement,Graph)
+        self.Graph = P.Plot_1D(parameter, measurement, Graph)
 
         # We draw if needed
         if draw is True:
@@ -182,7 +190,7 @@ class DataSet():
 
         return fig, ax, fit, err
 
-    def plots_1D(self, parameters=0, measurements=0, labels=None, Fit=None, draw=True, **kwargs):
+    def plots_1D(self, parameters=0, measurements=0, Fit=None, draw=True, **kwargs):
         """
         A wrapper for plot_1D for multiple curves
         """
@@ -191,8 +199,6 @@ class DataSet():
             parameters = [parameters]
         if type(measurements) is not list:
             measurements = [measurements]
-        if type(labels) is not list:
-            labels = [labels]
         if type(Fit) is not list:
             Fit = [Fit]
 
@@ -203,12 +209,6 @@ class DataSet():
                 parameters = [parameters[0] for i in range(nb)]
             else:
                 raise ValueError("Too much or too few parameters")
-
-        if len(labels) != nb:
-            if len(labels) == 1:
-                labels = [labels[0] for i in range(nb)]
-            else:
-                raise ValueError("Too much or too few labels")
 
         if len(Fit) != nb:
             if len(Fit) == 1:
@@ -223,9 +223,10 @@ class DataSet():
             # First instance
             if i == 0:
                 fig, ax, fit[i], err[i] = self.plot_1D(parameters[i], measurements[i],
-                                                       Fit[i], labels[i], None, True, **kwargs)
+                                                       Fit[i], None, True, **kwargs)
             # Other instances
             else:
                 fig, ax, fit[i], err[i] = self.plot_1D(parameters[i], measurements[i],
-                                                       Fit[i], labels[i], self.Graph, True, **kwargs)
+                                                       Fit[i], self.Graph, True, **kwargs)
+
         return fig, ax, fit, err

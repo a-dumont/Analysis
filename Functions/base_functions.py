@@ -114,3 +114,7 @@ def cosinus(t,a=1,w=1,phi=0,b=0,rad=True):
     """
     phi += np.pi/2
     return sinus(t,a,w,phi,b,rad)
+
+def power_law(x,a,b,c):
+
+    return a*(1-x/b)**c

@@ -3,6 +3,7 @@ from Analysis import Functions as F
 from Analysis import Fit as Fit
 
 from matplotlib import pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import scipy as sp
 
@@ -38,8 +39,18 @@ class Plot_1D():
         """
         # Define the data and the labels
         data = np.array([self.parameter.data, self.measurement.data])
-        xlabel = "%s (%s)" % (self.parameter.name, self.parameter.unit)
-        ylabel = "%s (%s)" % (self.measurement.name, self.measurement.unit)
+
+        if self.parameter.unit is not None and self.parameter.unit != "":
+            xlabel = "%s (%s)" % (self.parameter.name, self.parameter.unit)
+        else:
+            xlabel = "%s" % (self.parameter.name)
+
+        if self.measurement.unit is not None and self.measurement.unit != "":
+            ylabel = "%s (%s)" % (self.measurement.name, self.measurement.unit)
+        else:
+            ylabel = "%s" % (self.measurement.name)
+
+        data_label = self.measurement.label
 
         # Determine if a fit is wanted
         try:
@@ -47,10 +58,6 @@ class Plot_1D():
             assert fit in self.fit_functions, "%s not a fit function"%(fit)
             fit_function = self.fit_functions[fit]
 
-            try:
-                data_label = kwargs.pop("label")
-            except KeyError:
-                data_label = "Experimental Data"
             fit_label = "%s fit" % (fit)
 
             # Determine if there are any fit params
@@ -84,10 +91,21 @@ class Plot_1D():
             self.ax.plot(data[0], fit_function(
                 data[0], *fit_params), label=fit_label)
             self.ax.legend()
+            self.ax.set_xlabel(xlabel)
+            self.ax.set_ylabel(ylabel)
 
         else:
-            self.ax.plot(*data, **kwargs)
+            self.ax.plot(*data, label=data_label,**kwargs)
             self.ax.legend()
+            self.ax.set_xlabel(xlabel)
+            self.ax.set_ylabel(ylabel)
+
+        #xticks = abs(self.parameter.data.max()-self.parameter.data.min())/4
+        #yticks = abs(self.measurement.data.max()-self.measurement.data.min())/4
+        self.ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
+        self.ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
+        self.ax.xaxis.set_minor_locator(ticker.AutoMinorLocator(4))
+        self.ax.yaxis.set_minor_locator(ticker.AutoMinorLocator(4))
 
         if fit is not None:
             return self.fig, self.ax, fit_params, fit_err
