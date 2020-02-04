@@ -47,6 +47,14 @@ class Variable():
             self.name, self.data.min(), self.data.max(), self.unit, self.data.shape[0])
         return string
 
+    def add_err(self,err):
+        self.err = err
+        return
+
+    def add_label(self,label):
+        self.label = label
+        return
+
     def rescale(self, function,*args,new_name=None,new_unit=None,new_label=None,Type=None):
         """
         Rescales the parameter using the specified
@@ -124,6 +132,7 @@ class Measurement(Variable):
         super(Measurement, self).__init__(
             data, name, unit, err, label, Type="Measurement")
         return
+
 
 
 class DataSet():
@@ -207,7 +216,7 @@ class DataSet():
 
         return fig, ax, fit, err
 
-    def plots_1D(self, parameters=0, measurements=0, Fit=None, draw=True, **kwargs):
+    def plots_1D(self, parameters=0, measurements=0, Fit=None, draw=True, Graph=None, **kwargs):
         """
         A wrapper for plot_1D for multiple curves
         """
@@ -240,10 +249,75 @@ class DataSet():
             # First instance
             if i == 0:
                 fig, ax, fit[i], err[i] = self.plot_1D(parameters[i], measurements[i],
-                                                       Fit[i], None, True, **kwargs)
+                                                       Fit[i], Graph, True, **kwargs)
             # Other instances
             else:
                 fig, ax, fit[i], err[i] = self.plot_1D(parameters[i], measurements[i],
                                                        Fit[i], self.Graph, True, **kwargs)
 
         return fig, ax, fit, err
+
+    def add_measurements(self,measurements):
+        if type(measurements) is not list:
+            measurements = [measurements]
+            self.measurements = self.measurements+measurements
+        return
+
+    def add_parameters(self,parameterss):
+        if type(parameters) is not list:
+            parameterss = [parameters]
+            self.parameters = self.parameters+parameters
+        return
+
+
+
+def readfile(filename, parameter_name_unit, measurement_names_units, measurement_labels=None, delimiter=None,out="DataSet"):
+    """
+    Used to generate a DataSet from a file using np.genfromtxt
+
+    Parameters:
+    ---------------------------------------------------------
+    parameter_name_unit:    tuple("name","unit")
+    measurement_names_units:    list(tuple("name","unit") for number of measurements)
+    """
+
+    assert type(parameter_name_unit) is tuple, "parameter_name_unit must be a tuple"
+
+    if type(measurement_names_units) is not list:
+        if type(measurement_names_units) is tuple:
+            measurement_names_units = [measurement_names_units]
+        else:
+            raise TypeError("measurement_names_units must be a list of tuples or a single tuple")
+    else:
+        assert type(measurement_names_units[0]) is tuple, "measurement_names_units must be a list of tuples or a single tuple"
+
+    raw_data = np.genfromtxt(filename, delimiter=delimiter).T
+    shape = raw_data.shape[0]
+
+    parameter = Parameter(raw_data[0],*parameter_name_unit)
+    shape -= 1
+
+
+    if measurement_labels is None:
+        measurement_labels = [None for i in range(shape)]
+    measurements = []
+    for i in range(shape):
+        measurements.append(Measurement(raw_data[i+1],*measurement_names_units[i],label=measurement_labels[i]))
+
+    if Out == "DataSet":
+        res = DataSet(parameter,measurements)
+    elif Out == "Measurments":
+        res =  measurements
+    elif Out == "Parameter":
+        res =  parameter
+
+    return res
+
+
+
+
+
+
+
+
+
