@@ -10,7 +10,7 @@ class Variable():
     a controlled variable of an experiment
     """
 
-    def __init__(self, data, name, unit, label=None, Type="Variable"):
+    def __init__(self, data, name, unit, err=None, label=None, Type="Variable"):
         """
         Parameters:
         -----------------------------
@@ -28,6 +28,7 @@ class Variable():
         self.unit = unit
         self.type = Type
         self.label = label
+        self.err = err
 
         if type(data) is list:
             self.data = np.array(data)
@@ -55,6 +56,11 @@ class Variable():
         assert callable(function), "Function must be callable"
         data = function(self.data, *args)
 
+        if self.err is not None:
+            err = function(self.err, *args)
+        else:
+            err = self.err
+
         if new_name is None:
             new_name = self.name
         if new_unit is None:
@@ -65,47 +71,58 @@ class Variable():
         if Type is None:
             Type = self.type
         if Type == "Parameter":
-            return Parameter(data, new_name, new_unit,new_label)
+            return Parameter(data, new_name, new_unit,err,new_label)
         elif Type == "Measurement":
-            return Measurement(data, new_name, new_unit,new_label)
+            return Measurement(data, new_name, new_unit,err,new_label)
         else:
-            return Variable(data, new_name, new_unit,new_label)
+            return Variable(data, new_name, new_unit,err,new_label)
 
-        def subset(self, start, stop=None, step=1, single=False):
-            """
-            This function returns another object
-            of the same type but with a subset
-            of the data. The slice shoud be
-            a slice of an array Ex. [1:5:1]
-            """
-            if single is False:
-                data = self.data[start:stop:step]
-            elif single is True:
-                data = self.data[start]
-
+    def subset(self, start, stop=None, step=1, single=False):
+        """
+        This function returns another object
+        of the same type but with a subset
+        of the data. The slice shoud be
+        a slice of an array Ex. [1:5:1]
+        """
+        if single is False:
+            data = self.data[start:stop:step]
+            if self.err is not None:
+                err = self.err[start:stop:step]
+            else:
+                err = None
             if self.type == "Parameter":
-                result = Parameter(data, self.name, self.unit)
+                result = Parameter(data, self.name, self.unit,err,self.label)
             elif self.type == "Measurement":
-                result = Measurement(data, self.name, self.unit)
+                result = Measurement(data, self.name, self.unit,err,self.label)
             elif self.type == "Variable":
-                result = Variable(data, self.name, self.unit)
+                result = Variable(data, self.name, self.unit,err,self.label)
 
-            return result
+
+        elif single is True:
+            data = self.data[start]
+            if self.err is not None:
+                err = self.err[start]
+            else:
+                err = None
+
+            result = data
+
+        return result
 
 
 class Parameter(Variable):
 
-    def __init__(self, data, name, unit, label=None):
+    def __init__(self, data, name, unit, err=None, label=None):
         super(Parameter, self).__init__(
-            data, name, unit, label, Type="Parameter")
+            data, name, unit, err, label, Type="Parameter")
         return
 
 
 class Measurement(Variable):
 
-    def __init__(self, data, name, unit, label=None):
+    def __init__(self, data, name, unit, err=None, label=None):
         super(Measurement, self).__init__(
-            data, name, unit, label, Type="Measurement")
+            data, name, unit, err, label, Type="Measurement")
         return
 
 

@@ -27,6 +27,9 @@ class Plot_1D():
         """
         self.parameter = parameter
         self.measurement = measurement
+
+
+
         self.graph = graph
         self.fit_functions = {
             func.__name__: func for func in F.__dict__.values() if callable(func)}
@@ -87,16 +90,30 @@ class Plot_1D():
             self.fig, self.ax = self.graph.fig, self.graph.ax
 
         if fit is not None:
-            self.ax.plot(*data, label=data_label, **kwargs)
-            self.ax.plot(data[0], fit_function(
-                data[0], *fit_params), label=fit_label)
+            if self.parameter.err is not None or self.measurement.err is not None:
+                xerr = self.parameter.err
+                yerr = self.measurement.err
+                self.ax.errorbar(data[0],data[1],yerr,xerr,label=data_label, **kwargs)
+                self.ax.plot(data[0], fit_function(
+                    data[0], *fit_params), label=fit_label)
+            else:
+                self.ax.plot(*data, label=data_label, **kwargs)
+                self.ax.plot(data[0], fit_function(
+                    data[0], *fit_params), label=fit_label)
             self.ax.legend()
             self.ax.set_xlabel(xlabel)
             self.ax.set_ylabel(ylabel)
 
         else:
-            self.ax.plot(*data, label=data_label,**kwargs)
-            self.ax.legend()
+            if self.parameter.err is not None or self.measurement.err is not None:
+                xerr = self.parameter.err
+                yerr = self.measurement.err
+                self.ax.errorbar(data[0],data[1],yerr,xerr,label=data_label, **kwargs)
+
+            else:
+                self.ax.plot(*data, label=data_label,**kwargs)
+                if data_label is not None:
+                    self.ax.legend()
             self.ax.set_xlabel(xlabel)
             self.ax.set_ylabel(ylabel)
 
