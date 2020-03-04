@@ -92,12 +92,20 @@ class Variable():
         of the data. The slice shoud be
         a slice of an array Ex. [1:5:1]
         """
+
         if single is False:
-            data = self.data[start:stop:step]
-            if self.err is not None:
-                err = self.err[start:stop:step]
+            if type(start) is np.ndarray:
+                data = self.data[start]
+                if self.err is not None:
+                    err = self.err[start]
+                else:
+                    err = None
             else:
-                err = None
+                data = self.data[start:stop:step]
+                if self.err is not None:
+                    err = self.err[start:stop:step]
+                else:
+                    err = None
             if self.type == "Parameter":
                 result = Parameter(data, self.name, self.unit,err,self.label)
             elif self.type == "Measurement":
@@ -116,6 +124,148 @@ class Variable():
             result = data
 
         return result
+
+    def delete(self,start,stop,step):
+
+        data = np.delete(self.data,slice(start,stop,step))
+        if self.err is not None:
+            err = np.delete(self.err,slice(start,stop,step))
+        else:
+            err = None
+        if self.type == "Parameter":
+            result = Parameter(data, self.name, self.unit,err,self.label)
+        elif self.type == "Measurement":
+            result = Measurement(data, self.name, self.unit,err,self.label)
+        elif self.type == "Variable":
+            result = Variable(data, self.name, self.unit,err,self.label)
+
+
+        return result
+
+
+
+    def sort(self,index_array=None,kind="stable",Index=False):
+        """
+        Sorts the data using np.argsort
+        """
+        data = self.data
+        if index_array is None:
+            index_array = np.argsort(data)
+        sorted_data = data[index_array]
+
+        if self.type == "Parameter":
+            result = Parameter(sorted_data,self.name,self.unit,self.err,self.label)
+        elif self.type == "Measurement":
+            result = Measurement(sorted_data,self.name,self.unit,self.err,self.label)
+        else:
+            result = Variable(sorted_data,self.name,self.unit,self.err,self.label)
+
+        if Index is True:
+            return result,index_array
+        else:
+            return result
+
+    def sort_unique(self,Index=True):
+        data = self.data
+        sorted_data, index_array = np.unique(data,True)
+
+        if self.type == "Parameter":
+            result = Parameter(sorted_data,self.name,self.unit,self.err,self.label)
+        elif self.type == "Measurement":
+            result = Measurement(sorted_data,self.name,self.unit,self.err,self.label)
+        else:
+            result = Variable(sorted_data,self.name,self.unit,self.err,self.label)
+
+        if Index is True:
+            return result,index_array
+        else:
+            return result
+
+    def min(self, Slice=None):
+        """
+        Returns the minimum from the whole array or
+        a slice
+        """
+
+        if Slice is not None:
+            data = self.data[Slice]
+        else:
+            data = self.data
+        res = data.min()
+
+        return res
+
+    def argmin(self,Slice=None):
+        """
+        Returns the minimum's index from the
+        whole array or a slice
+        """
+
+        if Slice is not None:
+            data = self.data[Slice]
+        else:
+            data = self.data
+        res = np.argmin(data)
+        if Slice is not None:
+            res += Slice.start
+
+        return res
+
+
+    def max(self, Slice=None):
+        """
+        Returns the maximum for the whole array or
+        a slice
+        """
+
+        if Slice is not None:
+            data = self.data[Slice]
+        else:
+            data = self.data
+        res = data.max()
+
+        return res
+
+    def argmax(self,Slice=None):
+        """
+        Returns the maximum's index from the
+        whole array or a slice
+        """
+
+        if Slice is not None:
+            data = self.data[Slice]
+        else:
+            data = self.data
+        res = np.argmax(data)
+        if Slice is not None:
+            res += Slice.start
+
+        return res
+
+
+    def where(self,value, closest=True):
+        """
+        Returns the index giving the position
+        of value in the array or the closest
+        value if closest is True
+        """
+
+        data = self.data
+        index = np.where(data==value)[0]
+
+        if index.shape[0] == 0:
+            if closest is True:
+                index = np.where(data>=value)[0]
+                if index.shape[0] == 0:
+                    res = None
+                else:
+                    res = index[0]
+            else:
+                res = None
+        else:
+            res = index
+
+        return res
 
 
 class Parameter(Variable):
@@ -164,6 +314,242 @@ class DataSet():
         self.variables = variables
 
         return
+
+    def sort(self,parameter=None,measurements=None,unique=False):
+        """
+        Sorts the parameter in growing order and sorts
+        the measurements accordingly
+        """
+        if parameter is None:
+            parameter = self.parameters[0]
+        if measurements is None:
+            measurements = self.measurements
+
+        if unique is True:
+            param_sort, index_array = parameter.sort_unique()
+            measurements_sort = [i.subset(index_array) for i in measurements]
+        else:
+            param_sort, index_array = parameter.sort(Index=True)
+            measurements_sort = [i.subset(index_array) for i in measurements]
+
+        return DataSet(param_sort,measurements_sort)
+
+    def min(self,parameter,measurement,start=None,stop=None):
+        """
+        Returns the minimum value of a measurement
+        within an interval of the parameter from
+        start to stop
+        """
+
+        param = self.parameters[parameter]
+        meas = self.measurements[measurement]
+
+        if start is not None:
+            start = param.where(start)
+
+            if type(start) is np.ndarray:
+                if start.shape[0] is not None:
+                    start = start[0]
+                else:
+                    raise ValueError("Start value not in array")
+            else:
+                start = start
+        else:
+            start = 0
+
+        if stop is not None:
+            stop = param.where(stop)
+
+            if type(stop) is np.ndarray:
+                if stop.shape[0] is not None:
+                    stop = stop[0]
+                else:
+                    raise ValueError("Stop value not in array")
+            else:
+                stop = stop
+        else:
+            stop = meas.data.shape[0]
+
+        Slice = slice(start,stop)
+        res = meas.min(Slice)
+
+        return res
+
+    def argmin(self,parameter,measurement,start=None,stop=None):
+        """
+        Returns the minimum's index  of a measurement
+        within an interval of the parameter from
+        start to stop
+        """
+
+        param = self.parameters[parameter]
+        meas = self.measurements[measurement]
+
+        if start is not None:
+            start = param.where(start)
+
+            if type(start) is np.ndarray:
+                if start.shape[0] is not None:
+                    start = start[0]
+                else:
+                    raise ValueError("Start value not in array")
+            else:
+                start = start
+        else:
+            start = 0
+
+        if stop is not None:
+            stop = param.where(stop)
+
+            if type(stop) is np.ndarray:
+                if stop.shape[0] is not None:
+                    stop = stop[0]
+                else:
+                    raise ValueError("Stop value not in array")
+            else:
+                stop = stop
+        else:
+            stop = meas.data.shape[0]
+
+        Slice = slice(start,stop)
+        res = meas.argmin(Slice)
+
+        return res
+
+
+    def max(self,parameter,measurement,start=None,stop=None):
+        """
+        Returns the maximum value of a measurement
+        within an interval of the parameter from
+        start to stop
+        """
+
+        param = self.parameters[parameter]
+        meas = self.measurements[measurement]
+
+        if start is not None:
+            start = param.where(start)
+
+            if type(start) is np.ndarray:
+                if start.shape[0] is not None:
+                    start = start[0]
+                else:
+                    raise ValueError("Start value not in array")
+            else:
+                start = start
+        else:
+            start = 0
+
+        if stop is not None:
+            stop = param.where(stop)
+
+            if type(stop) is np.ndarray:
+                if stop.shape[0] is not None:
+                    stop = stop[0]
+                else:
+                    raise ValueError("Stop value not in array")
+            else:
+                stop = stop
+        else:
+            stop = meas.data.shape[0]
+
+        Slice = slice(start,stop)
+        res = meas.argmax(Slice)
+
+        Slice = slice(start,stop)
+        res = meas.max(Slice)
+
+        return res
+
+    def argmax(self,parameter,measurement,start=None,stop=None):
+        """
+        Returns the maximum's index of a measurement
+        within an interval of the parameter from
+        start to stop
+        """
+
+        param = self.parameters[parameter]
+        meas = self.measurements[measurement]
+
+        if start is not None:
+            start = param.where(start)
+
+            if type(start) is np.ndarray:
+                if start.shape[0] is not None:
+                    start = start[0]
+                else:
+                    raise ValueError("Start value not in array")
+            else:
+                start = start
+        else:
+            start = 0
+
+        if stop is not None:
+            stop = param.where(stop)
+
+            if type(stop) is np.ndarray:
+                if stop.shape[0] is not None:
+                    stop = stop[0]
+                else:
+                    raise ValueError("Stop value not in array")
+            else:
+                stop = stop
+        else:
+            stop = meas.data.shape[0]
+
+        Slice = slice(start,stop)
+        res = meas.argmax(Slice)
+
+        return res
+
+    def subset(self,start,stop,step,parameters=None,measurements=None):
+        """
+        Returns a subset of the DataSet
+        """
+
+        if parameters is None:
+            parameters = self.parameters
+        if measurements is None:
+            measurements = self.measurements
+
+        param_sub = [param.subset(start,stop,step) for param in parameters]
+        meas_sub = [meas.subset(start,stop,step) for meas in measurements]
+
+        return DataSet(param_sub,meas_sub)
+
+
+    def derive(self,parameter=0,measurement=0,name=None,unit=None,label=None):
+        """
+        Uses np.gradient to derive numericaly the data
+        """
+
+        parameter = self.parameters[parameter]
+        measurement = self.measurements[measurement]
+
+        data_x = parameter.data
+        data_y = measurement.data
+
+        data = np.gradient(data_y,data_x)
+
+        derivative = Measurement(data,name,unit,None,label)
+
+        return derivative
+
+    def delete(self,start,stop,step,parameters=None,measurements=None):
+        """
+        Returns a subset of the DataSet
+        """
+
+        if parameters is None:
+            parameters = self.parameters
+        if measurements is None:
+            measurements = self.measurements
+
+        param_del = [param.delete(start,stop,step) for param in parameters]
+        meas_del = [meas.delete(start,stop,step) for meas in measurements]
+
+        return DataSet(param_del,meas_del)
+
 
     def plot_1D(self, parameter=0, measurement=0, Fit=None, Graph=None, draw=True, **kwargs):
         """
@@ -216,7 +602,7 @@ class DataSet():
 
         return fig, ax, fit, err
 
-    def plots_1D(self, parameters=0, measurements=0, Fit=None, draw=True, Graph=None, **kwargs):
+    def plots_1D(self, parameters=0, measurements=0, Fit=None, draw=True, Graph=None, colors=None, **kwargs):
         """
         A wrapper for plot_1D for multiple curves
         """
@@ -227,6 +613,8 @@ class DataSet():
             measurements = [measurements]
         if type(Fit) is not list:
             Fit = [Fit]
+        if type(colors) is not list:
+            colors = [colors]
 
         nb = len(measurements)
 
@@ -242,6 +630,9 @@ class DataSet():
             else:
                 raise ValueError("Too much or too few Fit")
 
+        if len(colors) != nb:
+                colors = [None for i in range(nb)]
+
         fit, err = [None for i in range(nb)], [None for i in range(nb)]
 
         for i in range(nb):
@@ -249,29 +640,29 @@ class DataSet():
             # First instance
             if i == 0:
                 fig, ax, fit[i], err[i] = self.plot_1D(parameters[i], measurements[i],
-                                                       Fit[i], Graph, True, **kwargs)
+                                                       Fit[i], Graph, True, color=colors[i],**kwargs)
             # Other instances
             else:
                 fig, ax, fit[i], err[i] = self.plot_1D(parameters[i], measurements[i],
-                                                       Fit[i], self.Graph, True, **kwargs)
+                                                       Fit[i], self.Graph, True, color=colors[i],**kwargs)
 
         return fig, ax, fit, err
 
     def add_measurements(self,measurements):
         if type(measurements) is not list:
             measurements = [measurements]
-            self.measurements = self.measurements+measurements
+        self.measurements = self.measurements+measurements
         return
 
     def add_parameters(self,parameterss):
         if type(parameters) is not list:
             parameterss = [parameters]
-            self.parameters = self.parameters+parameters
+        self.parameters = self.parameters+parameters
         return
 
 
 
-def readfile(filename, parameter_name_unit, measurement_names_units, measurement_labels=None, delimiter=None,out="DataSet"):
+def readfile(filename, parameter_name_unit, measurement_names_units, measurement_labels=None, delimiter=None,Out="DataSet"):
     """
     Used to generate a DataSet from a file using np.genfromtxt
 
@@ -306,8 +697,8 @@ def readfile(filename, parameter_name_unit, measurement_names_units, measurement
 
     if Out == "DataSet":
         res = DataSet(parameter,measurements)
-    elif Out == "Measurments":
-        res =  measurements
+    elif Out == "Measurements":
+        res = measurements
     elif Out == "Parameter":
         res =  parameter
 

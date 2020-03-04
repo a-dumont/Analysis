@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import scipy as sp
+from cycler import cycler
 
 
 class Plot_1D():
@@ -27,7 +28,6 @@ class Plot_1D():
         """
         self.parameter = parameter
         self.measurement = measurement
-
 
 
         self.graph = graph
@@ -84,10 +84,30 @@ class Plot_1D():
 
         if self.graph is None:
             self.fig, self.ax = plt.subplots()
+            self.ax2 = None
         else:
             assert isinstance(
                 self.graph, Plot_1D) is True, "graph must be an instance of Plot_1D"
-            self.fig, self.ax = self.graph.fig, self.graph.ax
+            self.fig, self.ax, self.ax2 = self.graph.fig, self.graph.ax, self.graph.ax2
+
+            if ylabel != self.ax.get_ylabel():
+
+                if self.ax2 is None:
+                    self.ax2 = self.ax
+                    self.ax = self.ax2.twinx()
+                    n_lines = len(self.ax2.get_lines())
+
+                else:
+                    assert ylabel == self.ax2.get_ylabel(), "Figure can only have 2 Y scales"
+                    self.ax3 = self.ax
+                    self.ax = self.ax2
+                    self.ax2 = self.ax3
+                    n_lines = len(self.ax2.get_lines())+len(self.ax.get_lines())
+
+                colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+                colors = colors[n_lines:] + colors[:n_lines]
+                cc = cycler(color=colors)
+                self.ax.set_prop_cycle(cc)
 
         if fit is not None:
             if self.parameter.err is not None or self.measurement.err is not None:
@@ -114,8 +134,14 @@ class Plot_1D():
                 self.ax.plot(*data, label=data_label,**kwargs)
                 if data_label is not None:
                     self.ax.legend()
+
+            if self.ax2 is not None:
+                self.ax.set_ylabel(ylabel,color=self.ax.get_lines()[0].get_color())
+                self.ax2.set_ylabel(self.ax2.get_ylabel(),color=self.ax2.get_lines()[0].get_color())
+            else:
+                self.ax.set_ylabel(ylabel)
             self.ax.set_xlabel(xlabel)
-            self.ax.set_ylabel(ylabel)
+
 
         #xticks = abs(self.parameter.data.max()-self.parameter.data.min())/4
         #yticks = abs(self.measurement.data.max()-self.measurement.data.min())/4
@@ -125,9 +151,15 @@ class Plot_1D():
         self.ax.yaxis.set_minor_locator(ticker.AutoMinorLocator(4))
 
         if fit is not None:
-            return self.fig, self.ax, fit_params, fit_err
+            if self.ax2 is None:
+                return self.fig, self.ax, fit_params, fit_err
+            else:
+                return self.fig, [self.ax,self.ax2]
         else:
-            return self.fig, self.ax
+            if self.ax2 is None:
+                return self.fig, self.ax
+            else:
+                return self.fig, [self.ax,self.ax2]
 
 
 def Plot2D():

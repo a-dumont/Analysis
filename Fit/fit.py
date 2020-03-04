@@ -5,7 +5,7 @@ import Analysis.Functions as F
 
 def fit(function,x,y,p0,sigma=None,bounds=(-np.inf,np.inf)):
     fit, err = CF(function,x,y,p0=p0,sigma=sigma,bounds=bounds)
-    err = np.sqrt(np.diag(err))
+    err = np.sqrt(np.abs(np.diag(err)))
     return fit, err
 
 def linear_fit(x, y, p0=None, sigma=None,bounds=(-np.inf,np.inf)):
