@@ -509,8 +509,12 @@ class DataSet():
 
         if parameters is None:
             parameters = self.parameters
+        else:
+            parameters = [self.parameters[parameters]]
         if measurements is None:
             measurements = self.measurements
+        else:
+            measurements = [self.measurements[measurements]]
 
         param_sub = [param.subset(start,stop,step) for param in parameters]
         meas_sub = [meas.subset(start,stop,step) for meas in measurements]
@@ -654,7 +658,7 @@ class DataSet():
         self.measurements = self.measurements+measurements
         return
 
-    def add_parameters(self,parameterss):
+    def add_parameters(self,parameters):
         if type(parameters) is not list:
             parameterss = [parameters]
         self.parameters = self.parameters+parameters

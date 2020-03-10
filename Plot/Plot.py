@@ -29,7 +29,6 @@ class Plot_1D():
         self.parameter = parameter
         self.measurement = measurement
 
-
         self.graph = graph
         self.fit_functions = {
             func.__name__: func for func in F.__dict__.values() if callable(func)}
@@ -58,7 +57,7 @@ class Plot_1D():
         # Determine if a fit is wanted
         try:
             fit = kwargs.pop("Fit")
-            assert fit in self.fit_functions, "%s not a fit function"%(fit)
+            assert fit in self.fit_functions, "%s not a fit function" % (fit)
             fit_function = self.fit_functions[fit]
 
             fit_label = "%s fit" % (fit)
@@ -102,7 +101,8 @@ class Plot_1D():
                     self.ax3 = self.ax
                     self.ax = self.ax2
                     self.ax2 = self.ax3
-                    n_lines = len(self.ax2.get_lines())+len(self.ax.get_lines())
+                    n_lines = len(self.ax2.get_lines()) + \
+                        len(self.ax.get_lines())
 
                 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
                 colors = colors[n_lines:] + colors[:n_lines]
@@ -113,7 +113,8 @@ class Plot_1D():
             if self.parameter.err is not None or self.measurement.err is not None:
                 xerr = self.parameter.err
                 yerr = self.measurement.err
-                self.ax.errorbar(data[0],data[1],yerr,xerr,label=data_label, **kwargs)
+                self.ax.errorbar(data[0], data[1], yerr,
+                                 xerr, label=data_label, **kwargs)
                 self.ax.plot(data[0], fit_function(
                     data[0], *fit_params), label=fit_label)
             else:
@@ -128,20 +129,34 @@ class Plot_1D():
             if self.parameter.err is not None or self.measurement.err is not None:
                 xerr = self.parameter.err
                 yerr = self.measurement.err
-                self.ax.errorbar(data[0],data[1],yerr,xerr,label=data_label, **kwargs)
+                self.ax.errorbar(data[0], data[1], yerr,
+                                 xerr, label=data_label, **kwargs)
 
             else:
-                self.ax.plot(*data, label=data_label,**kwargs)
+                self.ax.plot(*data, label=data_label, **kwargs)
                 if data_label is not None:
                     self.ax.legend()
 
             if self.ax2 is not None:
-                self.ax.set_ylabel(ylabel,color=self.ax.get_lines()[0].get_color())
-                self.ax2.set_ylabel(self.ax2.get_ylabel(),color=self.ax2.get_lines()[0].get_color())
+                self.ax.set_ylabel(
+                    ylabel, color=self.ax.get_lines()[0].get_color())
+                self.ax.tick_params(axis="y", which="both", color=self.ax.get_lines()[
+                                    0].get_color(), labelcolor=self.ax.get_lines()[0].get_color())
+
+                self.ax2.set_ylabel(self.ax2.get_ylabel(),
+                                    color=self.ax2.get_lines()[0].get_color())
+                self.ax2.tick_params(axis="y", which="both", color=self.ax2.get_lines()[
+                                     0].get_color(), labelcolor=self.ax2.get_lines()[0].get_color())
+
+                if self.ax.spines["left"].get_edgecolor() == self.ax.spines["top"].get_edgecolor():
+                    self.ax2.spines["right"].set_color(self.ax.get_lines()[0].get_color())
+                    self.ax2.spines["left"].set_color(self.ax2.get_lines()[0].get_color())
+                    self.ax.spines["right"].set_color(self.ax.get_lines()[0].get_color())
+                    self.ax.spines["left"].set_color(self.ax2.get_lines()[0].get_color())
+
             else:
                 self.ax.set_ylabel(ylabel)
             self.ax.set_xlabel(xlabel)
-
 
         #xticks = abs(self.parameter.data.max()-self.parameter.data.min())/4
         #yticks = abs(self.measurement.data.max()-self.measurement.data.min())/4
@@ -154,12 +169,12 @@ class Plot_1D():
             if self.ax2 is None:
                 return self.fig, self.ax, fit_params, fit_err
             else:
-                return self.fig, [self.ax,self.ax2]
+                return self.fig, [self.ax, self.ax2]
         else:
             if self.ax2 is None:
                 return self.fig, self.ax
             else:
-                return self.fig, [self.ax,self.ax2]
+                return self.fig, [self.ax, self.ax2]
 
 
 def Plot2D():
