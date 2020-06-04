@@ -176,6 +176,51 @@ class Plot_1D():
             else:
                 return self.fig, [self.ax, self.ax2]
 
+def table(measurements,rowLabels=None):
+    """
+    Generates a table using matplotlib.pyplot.table
+    """
+
+    if type(measurements) is not list:
+        measurements = [measurements]
+
+    fig, ax = plt.subplots(figsize=(2,2))
+    fig.patch.set_visible(False)
+    ax.axis('off')
+    ax.axis('tight')
+    data = []
+    colLabels = []
+    for meas in measurements:
+        if meas.err is None:
+            data_str = [("{0:.%if}"%2).format(i) if type(i) is not np.int64 else "%i"%i  for i in meas.data]
+        else:
+            err = meas.err
+            fmt = ["%i"%(int(("%1.2e"%i).split("e")[1])) for i in err]
+            fmt2 = [abs(int(i)) if int(i)<0 else 0 for i in fmt]
+            err_str = [("{0:.%if}"%fmt2[i]).format(err.data[i]) for i in range(err.data.shape[0])]
+            meas_str = [("{0:.%if}"%fmt2[i]).format(meas.data[i]) for i in range(meas.data.shape[0])]
+            data_str = [r"%s $\pm$ %s"%(meas_str[i],err_str[i]) for i in range(len(meas_str))]
+
+        if meas.unit != "":
+            colLabel=r"%s (%s)"%(meas.name,meas.unit)
+        else:
+            colLabel=meas.name
+        data.append(data_str)
+        colLabels.append(colLabel)
+
+    data = (np.array(data).T).tolist()
+
+    table = plt.table(data,rowLabels=rowLabels,colLabels=colLabels,cellLoc="center",rowLoc="center",colLoc="center",loc="center")
+    #table.auto_set_font_size(False)
+    #table.set_fontsize(12)
+    if len(data) > 2:
+        table.scale(len(data[0]), len(data)-1)
+    else:
+        table.scale(len(data[0]), len(data)*1.5)
+
+    return fig, ax, table
+
+
 
 def Plot2D():
 

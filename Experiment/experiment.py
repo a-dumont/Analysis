@@ -28,7 +28,6 @@ class Variable():
         self.unit = unit
         self.type = Type
         self.label = label
-        self.err = err
 
         if type(data) is list:
             self.data = np.array(data)
@@ -36,6 +35,18 @@ class Variable():
             self.data = data
         else:
             raise Exception("Data must be a string or a 1D array")
+
+        if err is not None:
+            if type(err) is float or type(err) is int or type(err) is np.float64:
+                self.err = self.data*0+err
+            elif type(err) is list:
+                self.err = np.array(err)
+            elif type(err) is np.ndarray:
+                self.err = err
+            else:
+                raise ValueError("Err must be a float,int or a list or array of floats and ints")
+        else:
+            self.err = None
 
         return
 
